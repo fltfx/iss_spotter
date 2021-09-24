@@ -64,9 +64,7 @@ const fetchCoordsByIP = function(IP, callback) {
       return;
     }
     
-    //the 'body' or IP address response is already returned in JSON format
-    //use JSON.stringify to return IP address as a string
-    //incorrect: callback(null, JSON.stringify(body));
+    //the 'body' or coords response is already returned in JSON format
     const lat = JSON.parse(body).latitude.toString();
     const long = JSON.parse(body).longitude.toString();
     const coords = {
@@ -77,4 +75,45 @@ const fetchCoordsByIP = function(IP, callback) {
   });
 };
 
-module.exports = { fetchMyIP, fetchCoordsByIP };
+/**
+ * Makes a single API request to retrieve upcoming ISS fly over times the for the given lat/lng coordinates.
+ * Input:
+ *   - An object with keys `latitude` and `longitude`
+ *   - A callback (to pass back an error or the array of resulting data)
+ * Returns (via Callback):
+ *   - An error, if any (nullable)
+ *   - The fly over times as an array of objects (null if error). Example:
+ *     [ { risetime: 134564234, duration: 600 }, ... ]
+ */
+const fetchISSFlyOverTimes = function(coords, callback) {
+  let URL = "https://iss-pass.herokuapp.com/json/?lat=" + coords.lat + "&lon=" + coords.long;
+  console.log(URL);
+  //let URL = "https://freegeoip.app/json/162.245.144"; //invalid error test case
+
+  request(URL, (error, response, body) => {
+    //console.log('statusCode:', response && response.statusCode); // Print the response status code if a response was received
+    //console.log('body:', body, typeof(body)); // Print the HTML for the Google homepage.
+  
+    //Edge Case: Request Failed
+    // inside the request callback ...
+    // error can be set if invalid domain, user is offline, etc.
+    if (error) {
+      callback(error, null); //return with auto-generated error message
+      return; //return to index.js
+    }
+  
+    // if non-200 status, assume server error
+    if (response.statusCode !== 200) {
+      const msg = `Status Code ${response.statusCode} when rise time and duration. Response: ${body}`;
+      callback(Error(msg), null);
+      return;
+    }
+    
+    //the 'body' returned is already returned in JSON format, but only want "response" array
+    const oututRisetimeDuration = JSON.parse(body).response;
+
+    callback(null, oututRisetimeDuration);
+  });
+};
+
+module.exports = { fetchMyIP, fetchCoordsByIP, fetchISSFlyOverTimes };
